@@ -87,7 +87,7 @@
         }
 
         // Cargar lecturas del LED
-        fetch('http://127.0.0.1:5000/api/lectura_led') // Asegúrate de que esta URL es correcta
+        fetch('https://app-4e38ec5f-fde9-4728-897e-8d76c370a1ca.cleverapps.io/api/lectura_led') // Asegúrate de que esta URL es correcta
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Error al cargar lecturas del LED.');
@@ -121,7 +121,7 @@
             });
 
         // Cargar lecturas del Gas
-        fetch('http://127.0.0.1:5000/api/lectura_gas') // Asegúrate de que esta URL es correcta
+        fetch('https://app-4e38ec5f-fde9-4728-897e-8d76c370a1ca.cleverapps.io/api/lectura_gas') // Asegúrate de que esta URL es correcta
             .then(response => {
                 if (!response.ok) {
                     throw new Error('Error al cargar lecturas del Gas.');

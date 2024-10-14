@@ -117,7 +117,7 @@
         });
 
         function controlarLed(accion) {
-            fetch('http://127.0.0.1:5000/api/controlar_led', {
+            fetch('https://app-4e38ec5f-fde9-4728-897e-8d76c370a1ca.cleverapps.io/api/controlar_led', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -143,7 +143,7 @@
         function registrarLectura(valor, idSensor) {
             console.log("Enviando datos:", { valor_led: valor, id_sensor: idSensor, id_usuario: idUsuario });
 
-            fetch('http://127.0.0.1:5000/api/lecturas', {
+            fetch('https://app-4e38ec5f-fde9-4728-897e-8d76c370a1ca.cleverapps.io/api/lecturas', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -171,7 +171,7 @@
         }
 
         function obtenerLecturaSensorGas() {
-            fetch('http://127.0.0.1:5000/api/lectura_sensor_gas')
+            fetch('https://app-4e38ec5f-fde9-4728-897e-8d76c370a1ca.cleverapps.io/api/lectura_sensor_gas')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Error en la respuesta del servidor: ' + response.status);
