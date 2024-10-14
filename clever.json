@@ -1,0 +1,10 @@
+{
+  "type": "python",
+  "start": "python wsgi.py",
+  "env": {
+    "DATABASE_URL": "mysql+pymysql://mysql+pymysql://uuv6ikhjpysqbhud:c8MR2xZMJex3fl52ckIw@biuyxdngu1e0yt5ngk5f-mysql.services.clever-cloud.com:3306/biuyxdngu1e0yt5ngk5f"
+  },
+  "scripts": {
+    "postinstall": "pip install -r requirements.txt"
+  }
+}

@@ -12,7 +12,7 @@ CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
 
 
 # Configuración de la base de datos MySQL
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://root:@localhost:3306/control_gas'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://uuv6ikhjpysqbhud:c8MR2xZMJex3fl52ckIw@biuyxdngu1e0yt5ngk5f-mysql.services.clever-cloud.com:3306/biuyxdngu1e0yt5ngk5f'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 
