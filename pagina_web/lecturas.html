@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.5/css/jquery.dataTables.min.css">
+
+    <title>Lecturas de Sensores</title>
+    <style>
+        body {
+            background-image: url('images/sc.jpg');
+            background-size: cover;
+            color: rgb(255, 255, 255);
+        }
+        .container {
+            margin-top: 50px;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 30px;
+        }
+        table {
+            margin-top: 20px;
+            background-color: rgb(250, 250, 250);
+            border-radius: 8px;
+        }
+        th, td {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Lecturas de Sensores</h1>
+        
+        <!-- Tabla de lecturas del LED -->
+        <h2>Lecturas del LED</h2>
+        <table id="lecturas-led-table" class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th>ID Lectura</th>
+                    <th>ID Usuario</th>
+                    <th>ID Sensor</th>
+                    <th>Valor del LED</th>
+                    <th>Fecha y Hora</th>
+                </tr>
+            </thead>
+            <tbody id="lecturas-led-body">
+                <!-- Aquí se llenarán las lecturas del LED -->
+            </tbody>
+        </table>
+
+        <!-- Tabla de lecturas del Gas -->
+        <h2>Lecturas del Gas</h2>
+        <table id="lecturas-gas-table" class="table table-bordered table-hover">
+            <thead>
+                <tr>
+                    <th>ID Lectura</th>
+                    <th>ID Sensor</th>
+                    <th>Valor de Gas</th>
+                    <th>Estado</th>
+                    <th>Fecha y Hora</th>
+                </tr>
+            </thead>
+            <tbody id="lecturas-gas-body">
+                <!-- Aquí se llenarán las lecturas del gas -->
+            </tbody>
+        </table>
+
+        <button class="btn btn-primary" onclick="window.location.href='interfaz.html'">Regresar</button>
+    </div>
+
+    <!-- jQuery (necesario para DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- DataTables JS -->
+    <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+
+    <script>
+        const idUsuario = localStorage.getItem('id_usuario');
+        if (!idUsuario) {
+            alert('Usuario no encontrado. Por favor inicie sesión nuevamente.');
+            window.location.href = 'login.html'; // Cambia a la ruta de tu login
+        }
+
+        // Cargar lecturas del LED
+        fetch('http://127.0.0.1:5000/api/lectura_led') // Asegúrate de que esta URL es correcta
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar lecturas del LED.');
+                }
+                return response.json();
+            })
+            .then(lecturas => {
+                const tableBody = document.getElementById('lecturas-led-body');
+                lecturas.forEach(lectura => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${lectura.id_lectura}</td>
+                        <td>${lectura.id_usuario}</td>
+                        <td>${lectura.id_sensor}</td>
+                        <td>${lectura.valor_led}</td>
+                        <td>${new Date(lectura.fecha).toLocaleString()}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                // Inicializar DataTables para la tabla de LED
+                $('#lecturas-led-table').DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.11.5/i18n/Spanish.json"
+                    }
+                });
+            })
+            .catch(error => {
+                console.error(error.message);
+                alert('Error: ' + error.message);
+            });
+
+        // Cargar lecturas del Gas
+        fetch('http://127.0.0.1:5000/api/lectura_gas') // Asegúrate de que esta URL es correcta
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Error al cargar lecturas del Gas.');
+                }
+                return response.json();
+            })
+            .then(lecturas => {
+                const tableBody = document.getElementById('lecturas-gas-body');
+                lecturas.forEach(lectura => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${lectura.id_lectura}</td>
+                        <td>${lectura.id_sensor}</td>
+                        <td>${lectura.valor_gas}</td>
+                        <td>${lectura.estado_gas}</td>
+                        <td>${new Date(lectura.fecha).toLocaleString()}</td>
+                    `;
+                    tableBody.appendChild(row);
+                });
+
+                // Inicializar DataTables para la tabla de Gas
+                $('#lecturas-gas-table').DataTable({
+                    "language": {
+                        "url": "//cdn.datatables.net/plug-ins/1.11.5/i18n/Spanish.json"
+                    }
+                });
+            })
+            .catch(error => {
+                console.error(error.message);
+                alert('Error: ' + error.message);
+            });
+    </script>
+</body>
+</html>
