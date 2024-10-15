@@ -154,7 +154,7 @@ def controlar_led():
             return jsonify({"message": "No se recibió acción"}), 400
         
         accion = data['accion']
-        esp32_ip = 'http://192.168.1.75/controlar'  # Cambia esto si es necesario
+        esp32_ip = 'https://a696-167-0-222-154.ngrok-free.app/controlar'  # Cambia esto si es necesario
 
         if accion == 'encender':
             response = requests.post(esp32_ip, data={"comando": "LED_ON"})
