@@ -203,7 +203,7 @@ def controlar_led():
 
     nueva_lectura = LecturaLed(
         id_sensor=2,
-        id_usuario=data['id_usuario'],
+        id_usuario=1,
         valor_led=1 if data['estado'] else 0
     )
     db.session.add(nueva_lectura)
