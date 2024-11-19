@@ -141,7 +141,7 @@ def get_estado_login():
         })
     return jsonify({"estado": "desconectado"})
 
-@app.route('/api/lectura_gaspp', methods=['POST'])
+@app.route('/api/lectura_gas', methods=['POST'])
 def registrar_lectura_gas():
     data = request.json
     valor_gas = data.get('valor_gas')
@@ -160,6 +160,18 @@ def registrar_lectura_gas():
 
 @app.route('/api/lectura_gas', methods=['GET'])
 def get_ultima_lectura_gas():
+    ultima_lectura = Lectura.query.order_by(Lectura.fecha.desc()).first()
+    if ultima_lectura:
+        return jsonify({
+            'valor_gas': ultima_lectura.valor_gas,
+            'estado_gas': ultima_lectura.estado_gas,
+            'fecha': ultima_lectura.fecha.isoformat()
+        })
+    return jsonify({'mensaje': 'No hay lecturas disponibles'}), 404
+
+
+@app.route('/api/lectura_gaspp', methods=['GET'])
+def get_ultima_lectura_gas():
     # Recuperamos la última lectura registrada en la base de datos
     ultima_lectura = db.session.query(Lectura).order_by(Lectura.id_lectura.desc()).first()
 
@@ -177,16 +189,6 @@ def get_ultima_lectura_gas():
         return jsonify({'error': 'No se encontraron lecturas de gas'}), 404
 
 
-@app.route('/api/lectura_gas', methods=['GET'])
-def get_ultima_lectura_gas():
-    ultima_lectura = Lectura.query.order_by(Lectura.fecha.desc()).first()
-    if ultima_lectura:
-        return jsonify({
-            'valor_gas': ultima_lectura.valor_gas,
-            'estado_gas': ultima_lectura.estado_gas,
-            'fecha': ultima_lectura.fecha.isoformat()
-        })
-    return jsonify({'mensaje': 'No hay lecturas disponibles'}), 404
 
 @app.route('/api/led', methods=['POST'])
 def controlar_led():
