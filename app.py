@@ -171,7 +171,7 @@ def get_ultima_lectura_gas():
 
 
 @app.route('/api/lectura_gaspp', methods=['GET'])
-def get_ultima_lectura_gas():
+def get_ultima_lectura_gaspp():
     # Recuperamos la última lectura registrada en la base de datos
     ultima_lectura = db.session.query(Lectura).order_by(Lectura.id_lectura.desc()).first()
 
