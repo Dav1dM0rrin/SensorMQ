@@ -170,23 +170,28 @@ def get_ultima_lectura_gas():
     return jsonify({'mensaje': 'No hay lecturas disponibles'}), 404
 
 
-@app.route('/api/lectura_gaspp', methods=['GET'])
-def get_ultima_lectura_gaspp():
-    # Recuperamos la última lectura registrada en la base de datos
-    ultima_lectura = db.session.query(Lectura).order_by(Lectura.id_lectura.desc()).first()
 
-    if ultima_lectura:
-        # Si hay una lectura, devolvemos sus detalles
-        return jsonify({
-            'id_lectura': ultima_lectura.id_lectura,
-            'valor_gas': ultima_lectura.valor_gas,
-            'estado_gas': ultima_lectura.estado_gas,
-            'fecha': ultima_lectura.fecha.strftime('%Y-%m-%dT%H:%M:%S'),
-            'id_sensor': ultima_lectura.id_sensor
-        })
+@app.route('/api/lectura_gapps', methods=['GET'])
+def get_todas_lecturas_gaspp():
+    # Recuperamos todas las lecturas registradas en la base de datos
+    todas_lecturas = db.session.query(Lectura).all()
+
+    if todas_lecturas:
+        # Si hay lecturas, devolvemos una lista de lecturas con sus detalles
+        return jsonify([
+            {
+                'id_lectura': lectura.id_lectura,
+                'valor_gas': lectura.valor_gas,
+                'estado_gas': lectura.estado_gas,
+                'fecha': lectura.fecha.strftime('%Y-%m-%dT%H:%M:%S'),
+                'id_sensor': lectura.id_sensor
+            }
+            for lectura in todas_lecturas
+        ])
     else:
         # Si no hay lecturas registradas
         return jsonify({'error': 'No se encontraron lecturas de gas'}), 404
+
 
 
 
