@@ -141,7 +141,7 @@ def get_estado_login():
         })
     return jsonify({"estado": "desconectado"})
 
-@app.route('/api/lectura_gas', methods=['POST'])
+@app.route('/api/lectura_gaspp', methods=['POST'])
 def registrar_lectura_gas():
     data = request.json
     valor_gas = data.get('valor_gas')
@@ -157,6 +157,25 @@ def registrar_lectura_gas():
         db.session.commit()
         return jsonify({'mensaje': 'Lectura registrada correctamente'}), 201
     return jsonify({'error': 'Datos inválidos'}), 400
+
+@app.route('/api/lectura_gas', methods=['GET'])
+def get_ultima_lectura_gas():
+    # Recuperamos la última lectura registrada en la base de datos
+    ultima_lectura = db.session.query(Lectura).order_by(Lectura.id_lectura.desc()).first()
+
+    if ultima_lectura:
+        # Si hay una lectura, devolvemos sus detalles
+        return jsonify({
+            'id_lectura': ultima_lectura.id_lectura,
+            'valor_gas': ultima_lectura.valor_gas,
+            'estado_gas': ultima_lectura.estado_gas,
+            'fecha': ultima_lectura.fecha.strftime('%Y-%m-%dT%H:%M:%S'),
+            'id_sensor': ultima_lectura.id_sensor
+        })
+    else:
+        # Si no hay lecturas registradas
+        return jsonify({'error': 'No se encontraron lecturas de gas'}), 404
+
 
 @app.route('/api/lectura_gas', methods=['GET'])
 def get_ultima_lectura_gas():
