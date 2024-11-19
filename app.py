@@ -1,8 +1,11 @@
-from datetime import datetime
+from datetime import datetime,timedelta
 from flask import Flask, jsonify, request , session
 from flask_cors import CORS
 import requests 
 from flask_sqlalchemy import SQLAlchemy
+import os 
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 
 
 app = Flask(__name__)
@@ -14,10 +17,13 @@ CORS(app, resources={r"/api/*": {"origins": "http://127.0.0.1:5500"}})
 # Configuración de la base de datos MySQL
 app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+pymysql://uuv6ikhjpysqbhud:c8MR2xZMJex3fl52ckIw@biuyxdngu1e0yt5ngk5f-mysql.services.clever-cloud.com:3306/biuyxdngu1e0yt5ngk5f'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+#JWT
+app.config['JWT_SECRET_KEY'] = 'CONTROL'  # Cambia esto por una clave segura
+app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(hours=4)  # Duración del token a 4 horas
 
+jwt = JWTManager(app)
 
 db = SQLAlchemy(app)
-app.secret_key = 'control'  # Cambia esto por una clave secreta adecuada
 
 
 class Usuario(db.Model):
@@ -57,16 +63,30 @@ class LecturaLed(db.Model):
     valor_led = db.Column(db.Integer, nullable=False)
     fecha = db.Column(db.DateTime, default=datetime.utcnow)
 
+class UsuarioLogueado(db.Model):
+    __tablename__ = 'usuarios_logueados'
+    
+    id_log = db.Column(db.Integer, primary_key=True)
+    id_usuario = db.Column(db.Integer, db.ForeignKey('usuarios.id_usuario'), nullable=False)
+    nombre_usuario = db.Column(db.String(50), nullable=False)
+    hora_login = db.Column(db.DateTime, default=datetime.now)
+    estado = db.Column(db.Enum('en línea', 'desconectado'), nullable=False)
+
+
 # Rutas de la API
 
 # ... (todas las rutas anteriores sin cambios)
 
 @app.route('/api/usuarios', methods=['GET'])
 def get_usuarios():
+    current_user = get_jwt_identity()
     usuarios = Usuario.query.all()
     return jsonify([{"id_usuario": u.id_usuario,
                      "usuario": u.usuario,
                      "nombre": u.nombre} for u in usuarios])
+
+
+
 
 @app.route('/api/usuarios', methods=['POST'])
 def add_usuario():
@@ -83,6 +103,8 @@ def add_usuario():
 
     return jsonify({'id_usuario': nuevo_usuario.id_usuario}), 201
 
+
+
 @app.route('/api/login', methods=['GET'])
 def get_login():
     login = Login.query.all()
@@ -92,6 +114,8 @@ def get_login():
                      "contraseña":l.contraseña} for l in login])
       
 
+
+# Ruta de Login
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.get_json()
@@ -101,24 +125,52 @@ def login():
     if not usuario or not contraseña:
         return jsonify({"message": "Faltan datos"}), 400
 
-    # Consultar la base de datos para el usuario
+    # Busca el usuario en la base de datos
     login = Login.query.filter_by(usuario=usuario).first()
 
-    # Verificar credenciales
     if login and login.contraseña == contraseña:
-        # Almacenar id_usuario en la sesión
-        session['id_usuario'] = login.id_usuario
-        
-        # IP del ESP32
-        esp32_ip = '192.168.1.75'  # Cambia esto si es necesario
-        
-        return jsonify({
-            "message": "Login exitoso",
-            "id_usuario": login.id_usuario,
-            "esp32_ip": esp32_ip
-        }), 200
+        # Consulta el usuario en la tabla 'usuarios' usando el id_usuario del objeto 'login'
+        usuario_obj = Usuario.query.filter_by(id_usuario=login.id_usuario).first()
+
+        # Crear el token de acceso
+        access_token = create_access_token(identity=usuario)
+
+        # Registrar en la tabla `usuarios_logueados`
+        nuevo_log = UsuarioLogueado(
+            id_usuario=usuario_obj.id_usuario,
+            nombre_usuario=usuario_obj.nombre,  # Almacenar el nombre del usuario
+            estado='en línea'
+        )
+        db.session.add(nuevo_log)
+        db.session.commit()
+
+        return jsonify(token=access_token), 200
     else:
         return jsonify({"message": "Credenciales incorrectas"}), 401
+
+
+# Ruta de Logout
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    # Obtener el nombre de usuario a partir del token de acceso
+    usuario = get_jwt_identity()
+
+    # Consultar el usuario en la tabla `Login` para obtener su ID
+    login = Login.query.filter_by(usuario=usuario).first()
+    if not login:
+        return jsonify({"message": "Usuario no encontrado"}), 404
+
+    # Crear un nuevo registro en `usuarios_logueados` con estado 'desconectado'
+    nuevo_log = UsuarioLogueado(
+        id_usuario=login.id_usuario,
+        nombre_usuario=login.usuario,  # Asegúrate de que `usuario` contiene el nombre del usuario
+        estado='desconectado'
+    )
+    db.session.add(nuevo_log)
+    db.session.commit()
+
+    return jsonify({"message": "Cierre de sesión exitoso"}), 200
+
 
 @app.route('/api/sensores', methods=['GET'])
 def get_sensores():
@@ -148,31 +200,48 @@ def get_lectura_get():
 
 @app.route('/api/controlar_led', methods=['POST'])
 def controlar_led():
-    if request.method == 'POST':
+    try:
         data = request.get_json()
-        if not data or 'accion' not in data:
-            return jsonify({"message": "No se recibió acción"}), 400
+
+        # Verificación de parámetros
+        if 'state' not in data:
+            return jsonify({"error": "Falta el parámetro 'state'"}), 400
+
+        # Obtener el estado deseado del LED
+        led_state = data['state']
+
+        # Validación estricta del estado
+        if led_state not in ["on", "off"]:
+            return jsonify({"error": "El estado debe ser 'on' o 'off'"}), 400
+
+        # Obtener el nombre del usuario desde el JWT
+        nombre_usuario = get_jwt_identity()
+
+        # Obtener el ID del usuario desde la base de datos
+        usuario = Usuario.query.filter_by(usuario=nombre_usuario).first()
+        if not usuario:
+            return jsonify({"error": "Usuario no encontrado"}), 404
+
+        id_usuario = usuario.id_usuario
+        valor_salida = 1 if led_state == "on" else 0
+        id_sensor = 2  # Asumido que el LED tiene el ID de sensor 2
         
-        accion = data['accion']
-        esp32_ip = 'https://a696-167-0-222-154.ngrok-free.app/controlar'  # Cambia esto si es necesario
+        # Registrar el estado del LED en la base de datos
+        nueva_lectura = LecturaLed(
+            id_sensor=id_sensor,
+            id_usuario=id_usuario,
+            valor_salida=valor_salida
+        )
+        db.session.add(nueva_lectura)
+        db.session.commit()
 
-        if accion == 'encender':
-            response = requests.post(esp32_ip, data={"comando": "LED_ON"})
-            if response.status_code == 200:
-                # Registra la acción en la base de datos
-                return jsonify({"message": "LED Encendido"}), 200
-            else:
-                return jsonify({"message": "Error al encender el LED"}), 500
-        elif accion == 'apagar':
-            response = requests.post(esp32_ip, data={"comando": "LED_OFF"})
-            if response.status_code == 200:
-                # Registra la acción en la base de datos
-                return jsonify({"message": "LED Apagado"}), 200
-            else:
-                return jsonify({"message": "Error al apagar el LED"}), 500
-        else:
-            return jsonify({"message": "Acción no reconocida"}), 400
+        return jsonify({
+            "message": f"LED {led_state} y lectura registrada",
+            "estado_actual": valor_salida
+        }), 200
 
+    except Exception as e:
+        return jsonify({"error": "Error al procesar la solicitud", "detalles": str(e)}), 500
 
 
 @app.route('/api/lectura_sensor_gas', methods=['GET'])
@@ -244,6 +313,42 @@ def registrar_lectura_gas():
         return jsonify({'mensaje': 'Lectura registrada correctamente'}), 201
     else:
         return jsonify({'error': 'Datos inválidos'}), 400
+
+
+@app.route('/api/led_app', methods=['POST'])
+def led_registro():
+    try:
+        data = request.get_json()
+        
+        # Validar que el campo 'estado' esté presente y sea válido
+        if 'estado' not in data or data['estado'] not in [0, 1, "0", "1"]:
+            return jsonify({"error": "El parámetro 'estado' debe ser 0 o 1"}), 400
+        
+        # Convertir estado a entero (0 o 1)
+        valor_salida = int(data['estado'])
+        
+        # Actualizar estado global del LED
+        global led_state
+        led_state = "on" if valor_salida == 1 else "off"
+        
+        # Crear una nueva lectura
+        nueva_lectura = LecturaLed(
+            id_sensor=2,  # ID 2 para el LED según tu esquema
+            id_usuario=4,  # ID del usuario (ajústalo según corresponda)
+            valor_salida=valor_salida
+        )
+        
+        # Guardar en la base de datos
+        db.session.add(nueva_lectura)
+        db.session.commit()
+        
+        return jsonify({
+            "mensaje": f"Estado del LED registrado correctamente ({led_state})",
+            "valor": valor_salida
+        }), 200
+    
+    except Exception as e:
+        return jsonify({"error": "Error al registrar estado del LED", "detalles": str(e)}), 500
 
 
 
